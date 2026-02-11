@@ -1,0 +1,5 @@
+{
+  "name": "Crypto Mission Tracker",
+  "description": "A web application to track daily check-ins and missions for various crypto and social finance websites. It helps manage tasks by providing a centralized list with links, descriptions, and completion status.",
+  "requestFramePermissions": []
+}
