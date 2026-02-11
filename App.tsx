@@ -37,6 +37,13 @@ const App: React.FC = () => {
   const canEdit = role === 'admin' || role === 'editor';
 
   useEffect(() => {
+    // Show auth modal on load if user is not logged in
+    if (!loading && !user) {
+      setAuthModalOpen(true);
+    }
+  }, [user, loading]);
+
+  useEffect(() => {
     const dataDocRef = doc(db, 'sharedDashboard', 'data');
 
     const unsubscribes: (() => void)[] = [];
