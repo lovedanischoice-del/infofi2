@@ -8,7 +8,6 @@ import { UserPlusIcon } from './icons/UserPlusIcon';
 
 interface TaskItemProps {
   task: Task;
-  canEdit: boolean;
   onToggleComplete: (taskId: string) => void;
   onDelete: (taskId:string) => void;
   onEdit: (task: Task) => void;
@@ -38,22 +37,21 @@ const getDaysRemainingText = (endDate?: string): { text: string; color: string }
 };
 
 
-const TaskItem: React.FC<TaskItemProps> = ({ task, canEdit, onToggleComplete, onDelete, onEdit }) => {
+const TaskItem: React.FC<TaskItemProps> = ({ task, onToggleComplete, onDelete, onEdit }) => {
   const { text: daysRemainingText, color: daysRemainingColor } = getDaysRemainingText(task.endDate);
 
   return (
     <div
-      className={`flex items-center p-4 rounded-xl transition-all duration-300 ${
-        task.isCompleted ? 'bg-white/30 opacity-60' : 'bg-white/50'
-      } ${canEdit ? 'transform hover:-translate-y-1 hover:shadow-lg' : ''} ${canEdit && !task.isCompleted ? 'hover:bg-white/70' : ''} ${canEdit && task.isCompleted ? 'hover:opacity-75' : ''}`}
+      className={`flex items-center p-4 rounded-xl transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg ${
+        task.isCompleted ? 'bg-white/30 opacity-60 hover:opacity-75' : 'bg-white/50 hover:bg-white/70'
+      }`}
     >
       <div className="flex-shrink-0">
          <input
           type="checkbox"
           checked={task.isCompleted}
           onChange={() => onToggleComplete(task.id)}
-          disabled={!canEdit}
-          className={`w-6 h-6 rounded-md bg-slate-100 border-slate-300 text-accent focus:ring-accent focus:ring-2 ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+          className="w-6 h-6 rounded-md bg-slate-100 border-slate-300 text-accent focus:ring-accent focus:ring-2 cursor-pointer"
         />
       </div>
 
@@ -98,7 +96,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, canEdit, onToggleComplete, on
         </div>
       </div>
 
-      {canEdit && <div className="flex-shrink-0 flex items-center space-x-1">
+      <div className="flex-shrink-0 flex items-center space-x-1">
         {task.referralUrl && (
           <a
             href={task.referralUrl}
@@ -127,7 +125,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, canEdit, onToggleComplete, on
         >
           <TrashIcon className="w-5 h-5" />
         </button>
-      </div>}
+      </div>
     </div>
   );
 };

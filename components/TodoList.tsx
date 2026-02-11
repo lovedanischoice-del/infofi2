@@ -9,14 +9,13 @@ interface TodoListProps {
   onAdd: (text: string) => void;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
-  canEdit: boolean;
 }
 
-const TodoList: React.FC<TodoListProps> = ({ todos, onAdd, onToggle, onDelete, canEdit }) => {
+const TodoList: React.FC<TodoListProps> = ({ todos, onAdd, onToggle, onDelete }) => {
   const [newTodo, setNewTodo] = useState('');
 
   const addTodo = () => {
-    if (newTodo.trim() === '' || !canEdit) return;
+    if (newTodo.trim() === '') return;
     onAdd(newTodo);
     setNewTodo('');
   };
@@ -27,7 +26,7 @@ const TodoList: React.FC<TodoListProps> = ({ todos, onAdd, onToggle, onDelete, c
   return (
     <div>
       <p className="text-sm text-medium mb-4">{completedCount} / {todos.length} completed</p>
-      {canEdit && <div className="flex space-x-2 mb-4">
+      <div className="flex space-x-2 mb-4">
         <input
           type="text"
           value={newTodo}
@@ -43,7 +42,7 @@ const TodoList: React.FC<TodoListProps> = ({ todos, onAdd, onToggle, onDelete, c
         >
           <PlusIcon className="w-5 h-5" />
         </button>
-      </div>}
+      </div>
       <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
         {sortedTodos.map((todo) => (
           <TodoItem
@@ -51,7 +50,6 @@ const TodoList: React.FC<TodoListProps> = ({ todos, onAdd, onToggle, onDelete, c
             todo={todo}
             onToggle={onToggle}
             onDelete={onDelete}
-            canEdit={canEdit}
           />
         ))}
       </div>

@@ -1,10 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { User } from 'firebase/auth';
-import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
-import { db } from './firebase/firebase';
-import useAuthWithRole from './hooks/useAuthWithRole';
-
+import React, { useState, useCallback } from 'react';
 import { Task, Todo, QuickLink, ImportantDate, SidebarLayout } from './types';
 import Header from './components/Header';
 import TaskList from './components/TaskList';
@@ -12,7 +7,7 @@ import TaskModal from './components/TaskModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import { PlusIcon } from './components/icons/PlusIcon';
 import Sidebar from './components/Sidebar';
-import Auth from './components/Auth';
+import useLocalStorage from './hooks/useLocalStorage';
 
 const defaultSidebarLayout: SidebarLayout = {
   column1: ['pinned', 'quicklinks', 'dates'],
@@ -20,167 +15,149 @@ const defaultSidebarLayout: SidebarLayout = {
 };
 
 const App: React.FC = () => {
-  const { user, role, loading } = useAuthWithRole();
-  const [isAuthModalOpen, setAuthModalOpen] = useState(false);
-
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [notes, setNotes] = useState<string>('');
-  const [quickLinks, setQuickLinks] = useState<QuickLink[]>([]);
-  const [importantDates, setImportantDates] = useState<ImportantDate[]>([]);
-  const [sidebarLayout, setSidebarLayout] = useState<SidebarLayout>(defaultSidebarLayout);
+  const [tasks, setTasks] = useLocalStorage<Task[]>('crypto-missions:tasks', []);
+  const [todos, setTodos] = useLocalStorage<Todo[]>('crypto-missions:todos', []);
+  const [notes, setNotes] = useLocalStorage<string>('crypto-missions:notes', '');
+  const [quickLinks, setQuickLinks] = useLocalStorage<QuickLink[]>('crypto-missions:quickLinks', []);
+  const [importantDates, setImportantDates] = useLocalStorage<ImportantDate[]>('crypto-missions:importantDates', []);
+  const [sidebarLayout, setSidebarLayout] = useLocalStorage<SidebarLayout>('crypto-missions:sidebarLayout', defaultSidebarLayout);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 
-  const canEdit = role === 'admin' || role === 'editor';
-
-  useEffect(() => {
-    // Show auth modal on load if user is not logged in
-    if (!loading && !user) {
-      setAuthModalOpen(true);
-    }
-  }, [user, loading]);
-
-  useEffect(() => {
-    const dataDocRef = doc(db, 'sharedDashboard', 'data');
-
-    const unsubscribes: (() => void)[] = [];
-
-    const createCollectionSubscription = <T,>(collectionName: string, setter: React.Dispatch<React.SetStateAction<T[]>>) => {
-      const unsubscribe = onSnapshot(collection(dataDocRef, collectionName), (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as T[];
-        setter(data);
-      });
-      unsubscribes.push(unsubscribe);
-    };
-
-    createCollectionSubscription<Task>('tasks', setTasks);
-    createCollectionSubscription<Todo>('todos', setTodos);
-    createCollectionSubscription<QuickLink>('quickLinks', setQuickLinks);
-    createCollectionSubscription<ImportantDate>('importantDates', setImportantDates);
-    
-    const unsubscribeDashboard = onSnapshot(dataDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            setNotes(data.notes || '');
-            setSidebarLayout(data.sidebarLayout || defaultSidebarLayout);
-        }
-    });
-    unsubscribes.push(unsubscribeDashboard);
-
-    return () => unsubscribes.forEach(unsub => unsub());
-  }, []);
-
   const handleOpenModal = useCallback((task: Task | null = null) => {
-    if (!canEdit) return;
     setTaskToEdit(task);
     setIsModalOpen(true);
-  }, [canEdit]);
+  }, []);
 
   const handleCloseModal = useCallback(() => {
     setTaskToEdit(null);
     setIsModalOpen(false);
   }, []);
 
-  const handleSaveTask = useCallback(async (task: Task) => {
-    if (!canEdit) return;
-    const { id, ...taskData } = task;
-    const collectionRef = collection(db, 'sharedDashboard', 'data', 'tasks');
-    if (id) {
-      await updateDoc(doc(collectionRef, id), taskData);
+  const handleSaveTask = useCallback((task: Task) => {
+    if (task.id) {
+      setTasks(prevTasks => prevTasks.map(t => t.id === task.id ? task : t));
     } else {
-      await addDoc(collectionRef, taskData);
+      setTasks(prevTasks => [...prevTasks, { ...task, id: crypto.randomUUID(), isCompleted: false }]);
     }
     handleCloseModal();
-  }, [canEdit, handleCloseModal]);
-  
-  const handleToggleComplete = useCallback(async (taskId: string) => {
-    if (!canEdit) return;
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
-      await updateDoc(doc(db, 'sharedDashboard', 'data', 'tasks', taskId), { isCompleted: !task.isCompleted });
-    }
-  }, [canEdit, tasks]);
+  }, [handleCloseModal, setTasks]);
+
+  const handleToggleComplete = useCallback((taskId: string) => {
+    setTasks(prevTasks => prevTasks.map(t => 
+      t.id === taskId ? { ...t, isCompleted: !t.isCompleted } : t
+    ));
+  }, [setTasks]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
-      if (!canEdit) return;
-      setTaskToDelete(taskId);
-  }, [canEdit]);
-  
-  const handleConfirmDelete = useCallback(async () => {
-    if (!taskToDelete || !canEdit) return;
-    await deleteDoc(doc(db, 'sharedDashboard', 'data', 'tasks', taskToDelete));
+    setTaskToDelete(taskId);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!taskToDelete) return;
+    setTasks(prevTasks => prevTasks.filter(t => t.id !== taskToDelete));
     setTaskToDelete(null);
-  }, [taskToDelete, canEdit]);
+  }, [taskToDelete, setTasks]);
 
-  const handleCancelDelete = useCallback(() => setTaskToDelete(null), []);
+  const handleCancelDelete = useCallback(() => {
+    setTaskToDelete(null);
+  }, []);
 
-  const handleNotesChange = useCallback(async (newNotes: string) => {
-    setNotes(newNotes); // Optimistic update
-    if (!canEdit) return;
-    await setDoc(doc(db, 'sharedDashboard', 'data'), { notes: newNotes }, { merge: true });
-  }, [canEdit]);
+  const handleNotesChange = useCallback((newNotes: string) => {
+    setNotes(newNotes);
+  }, [setNotes]);
 
-  const handleLayoutChange = useCallback(async (newLayout: SidebarLayout) => {
-    if (!canEdit) return;
-    setSidebarLayout(newLayout);
-    await setDoc(doc(db, 'sharedDashboard', 'data'), { sidebarLayout: newLayout }, { merge: true });
-  }, [canEdit]);
+  const handleLayoutChange = useCallback((newLayout: SidebarLayout) => {
+      setSidebarLayout(newLayout);
+  }, [setSidebarLayout]);
   
-  const handleSaveQuickLink = useCallback(async (link: Omit<QuickLink, 'id'>) => {
-    if (!canEdit) return;
-    await addDoc(collection(db, 'sharedDashboard', 'data', 'quickLinks'), link);
-  }, [canEdit]);
+  const handleSaveQuickLink = useCallback((link: Omit<QuickLink, 'id'>) => {
+    setQuickLinks(prev => [...prev, { ...link, id: crypto.randomUUID() }]);
+  }, [setQuickLinks]);
 
-  const handleDeleteQuickLink = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    await deleteDoc(doc(db, 'sharedDashboard', 'data', 'quickLinks', id));
-  }, [canEdit]);
+  const handleDeleteQuickLink = useCallback((id: string) => {
+    setQuickLinks(prev => prev.filter(link => link.id !== id));
+  }, [setQuickLinks]);
 
-  const handleSaveImportantDate = useCallback(async (newDate: Omit<ImportantDate, 'id'>) => {
-    if (!canEdit) return;
-    await addDoc(collection(db, 'sharedDashboard', 'data', 'importantDates'), newDate);
-  }, [canEdit]);
+  const handleSaveImportantDate = useCallback((newDate: Omit<ImportantDate, 'id'>) => {
+    setImportantDates(prev => [...prev, { ...newDate, id: crypto.randomUUID() }]);
+  }, [setImportantDates]);
 
-  const handleDeleteImportantDate = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    await deleteDoc(doc(db, 'sharedDashboard', 'data', 'importantDates', id));
-  }, [canEdit]);
+  const handleDeleteImportantDate = useCallback((id: string) => {
+    setImportantDates(prev => prev.filter(d => d.id !== id));
+  }, [setImportantDates]);
 
-  const handleAddTodo = useCallback(async (text: string) => {
-    if (text.trim() === '' || !canEdit) return;
-    await addDoc(collection(db, 'sharedDashboard', 'data', 'todos'), { text, isCompleted: false });
-  }, [canEdit]);
+  const handleAddTodo = useCallback((text: string) => {
+    if (text.trim() === '') return;
+    setTodos(prev => [...prev, { id: crypto.randomUUID(), text, isCompleted: false }]);
+  }, [setTodos]);
 
-  const handleToggleTodo = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    const todo = todos.find(t => t.id === id);
-    if (todo) {
-      await updateDoc(doc(db, 'sharedDashboard', 'data', 'todos', id), { isCompleted: !todo.isCompleted });
-    }
-  }, [canEdit, todos]);
+  const handleToggleTodo = useCallback((id: string) => {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, isCompleted: !t.isCompleted } : t));
+  }, [setTodos]);
 
-  const handleDeleteTodo = useCallback(async (id: string) => {
-    if (!canEdit) return;
-    await deleteDoc(doc(db, 'sharedDashboard', 'data', 'todos', id));
-  }, [canEdit]);
+  const handleDeleteTodo = useCallback((id: string) => {
+    setTodos(prev => prev.filter(t => t.id !== id));
+  }, [setTodos]);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <h1 className="text-2xl font-bold text-medium">Loading Mission Control...</h1>
-      </div>
-    );
-  }
+  const handleExportData = useCallback(() => {
+    const dataToExport = {
+      tasks,
+      todos,
+      notes,
+      quickLinks,
+      importantDates,
+      sidebarLayout,
+    };
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'infofi-mission-control-backup.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [tasks, todos, notes, quickLinks, importantDates, sidebarLayout]);
+
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') throw new Error("File could not be read");
+        const importedData = JSON.parse(text);
+
+        if (window.confirm("Are you sure you want to import this data? This will overwrite your current data.")) {
+          setTasks(importedData.tasks || []);
+          setTodos(importedData.todos || []);
+          setNotes(importedData.notes || '');
+          setQuickLinks(importedData.quickLinks || []);
+          setImportantDates(importedData.importantDates || []);
+          setSidebarLayout(importedData.sidebarLayout || defaultSidebarLayout);
+        }
+      } catch (error) {
+        alert("Error importing data. Please make sure the file is a valid backup file.");
+        console.error("Import error:", error);
+      }
+    };
+    reader.readAsText(file);
+    // Reset file input to allow importing the same file again
+    event.target.value = '';
+  };
 
   const completedTasks = tasks.filter(t => t.isCompleted).length;
   const totalTasks = tasks.length;
 
   return (
     <div className="min-h-screen">
-      <Header user={user} onLoginClick={() => setAuthModalOpen(true)} />
+      <Header onExport={handleExportData} onImport={handleImportData} />
       <main className="container mx-auto p-4 md:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 lg:gap-8">
           <div className="lg:col-span-2">
@@ -203,7 +180,6 @@ const App: React.FC = () => {
 
               <TaskList
                 tasks={tasks}
-                canEdit={canEdit}
                 onToggleComplete={handleToggleComplete}
                 onDelete={handleDeleteTask}
                 onEdit={handleOpenModal}
@@ -212,13 +188,13 @@ const App: React.FC = () => {
               {tasks.length === 0 && (
                 <div className="text-center py-10">
                   <p className="text-medium">No missions yet.</p>
-                  {canEdit && <button 
+                  <button 
                     onClick={() => handleOpenModal()} 
                     className="mt-4 inline-flex items-center bg-accent hover:bg-fuchsia-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
                   >
                     <PlusIcon className="w-5 h-5 mr-2" />
                     Add your first mission
-                  </button>}
+                  </button>
                 </div>
               )}
             </div>
@@ -240,15 +216,12 @@ const App: React.FC = () => {
               onAddTodo={handleAddTodo}
               onToggleTodo={handleToggleTodo}
               onDeleteTodo={handleDeleteTodo}
-              canEdit={canEdit}
             />
           </div>
         </div>
       </main>
       
-      {isAuthModalOpen && <Auth onClose={() => setAuthModalOpen(false)} />}
-      
-      {isModalOpen && canEdit && (
+      {isModalOpen && (
         <TaskModal
           task={taskToEdit}
           onClose={handleCloseModal}
@@ -264,13 +237,13 @@ const App: React.FC = () => {
         message="Are you sure you want to delete this mission? This action cannot be undone."
       />
 
-      {canEdit && <button
+      <button
         onClick={() => handleOpenModal()}
         className="fixed bottom-8 right-8 bg-accent hover:bg-fuchsia-600 text-white p-4 rounded-full shadow-lg transition-transform duration-200 transform hover:scale-110"
         aria-label="Add new mission"
       >
         <PlusIcon className="w-8 h-8" />
-      </button>}
+      </button>
     </div>
   );
 };

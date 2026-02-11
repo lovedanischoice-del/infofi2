@@ -29,14 +29,13 @@ interface SidebarProps {
   onAddTodo: (text: string) => void;
   onToggleTodo: (id: string) => void;
   onDeleteTodo: (id: string) => void;
-  canEdit: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = (props) => {
   const { 
     tasks, layout, setLayout, onNotesChange, 
     onSaveQuickLink, onDeleteQuickLink, onSaveImportantDate, onDeleteImportantDate,
-    onAddTodo, onToggleTodo, onDeleteTodo, canEdit
+    onAddTodo, onToggleTodo, onDeleteTodo
   } = props;
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
@@ -46,15 +45,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
   const componentMap: { [key: string]: { title: string; component: React.ReactNode; hidden?: boolean } } = {
     pinned: { title: "Yaping Leaderboards", component: <PinnedMissions tasks={yapingMissions} />, hidden: yapingMissions.length === 0 },
-    quicklinks: { title: "Quick Links", component: <QuickLinks links={props.quickLinks} onDelete={onDeleteQuickLink} onOpenModal={() => setActiveModal('quicklink')} canEdit={canEdit} /> },
-    dates: { title: "중요일정", component: <ImportantDates importantDates={props.importantDates} onDelete={onDeleteImportantDate} onOpenModal={() => setActiveModal('importantdate')} canEdit={canEdit} /> },
-    todos: { title: "To-Do List", component: <TodoList todos={props.todos} onAdd={onAddTodo} onToggle={onToggleTodo} onDelete={onDeleteTodo} canEdit={canEdit} /> },
-    notes: { title: "Notes", component: <Notes notes={props.notes} onNotesChange={onNotesChange} canEdit={canEdit} /> },
+    quicklinks: { title: "Quick Links", component: <QuickLinks links={props.quickLinks} onDelete={onDeleteQuickLink} onOpenModal={() => setActiveModal('quicklink')} /> },
+    dates: { title: "중요일정", component: <ImportantDates importantDates={props.importantDates} onDelete={onDeleteImportantDate} onOpenModal={() => setActiveModal('importantdate')} /> },
+    todos: { title: "To-Do List", component: <TodoList todos={props.todos} onAdd={onAddTodo} onToggle={onToggleTodo} onDelete={onDeleteTodo} /> },
+    notes: { title: "Notes", component: <Notes notes={props.notes} onNotesChange={onNotesChange} /> },
   };
 
   const onDragEnd = (result: DropResult) => {
     const { source, destination } = result;
-    if (!destination || !canEdit) return;
+    if (!destination) return;
 
     const sourceColId = source.droppableId;
     const destColId = destination.droppableId;
@@ -76,24 +75,23 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
   };
 
   const renderColumn = (columnId: keyof SidebarLayout) => (
-    <Droppable droppableId={columnId} isDropDisabled={!canEdit}>
+    <Droppable droppableId={columnId}>
       {(provided, snapshot) => (
         <div 
           ref={provided.innerRef} 
           {...provided.droppableProps}
-          className={`space-y-8 transition-colors duration-200 rounded-2xl ${snapshot.isDraggingOver && canEdit ? 'bg-white/20' : ''}`}
+          className={`space-y-8 transition-colors duration-200 rounded-2xl ${snapshot.isDraggingOver ? 'bg-white/20' : ''}`}
         >
           {layout[columnId].map((key, index) => {
             const item = componentMap[key];
             if (item.hidden) return null;
             return (
-              <Draggable key={key} draggableId={key} index={index} isDragDisabled={!canEdit}>
+              <Draggable key={key} draggableId={key} index={index}>
                 {(provided, snapshot) => (
                    <SidebarPanel 
                       title={item.title}
                       provided={provided}
                       snapshot={snapshot}
-                      canEdit={canEdit}
                     >
                       {item.component}
                    </SidebarPanel>
@@ -107,25 +105,22 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     </Droppable>
   );
 
-  const DndWrapper = canEdit ? DragDropContext : React.Fragment;
-  const dndProps = canEdit ? { onDragEnd } : {};
-
   return (
     <>
-      <DndWrapper {...dndProps}>
+      <DragDropContext onDragEnd={onDragEnd}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {renderColumn('column1')}
               {renderColumn('column2')}
           </div>
-      </DndWrapper>
+      </DragDropContext>
 
-      {activeModal === 'quicklink' && canEdit && (
+      {activeModal === 'quicklink' && (
         <QuickLinkModal 
             onClose={() => setActiveModal(null)} 
             onSave={onSaveQuickLink} 
         />
       )}
-      {activeModal === 'importantdate' && canEdit && (
+      {activeModal === 'importantdate' && (
         <ImportantDateModal 
             onClose={() => setActiveModal(null)} 
             onSave={onSaveImportantDate} 

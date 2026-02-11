@@ -8,13 +8,9 @@ interface SidebarPanelProps {
   provided: DraggableProvided;
   snapshot: DraggableStateSnapshot;
   children: React.ReactNode;
-  canEdit: boolean;
 }
 
-const SidebarPanel: React.FC<SidebarPanelProps> = ({ title, provided, snapshot, children, canEdit }) => {
-  const dragHandleProps = canEdit ? provided.dragHandleProps : {};
-  const cursorClass = canEdit ? 'cursor-grab active:cursor-grabbing' : '';
-  
+const SidebarPanel: React.FC<SidebarPanelProps> = ({ title, provided, snapshot, children }) => {
   return (
     <div
       ref={provided.innerRef}
@@ -22,11 +18,11 @@ const SidebarPanel: React.FC<SidebarPanelProps> = ({ title, provided, snapshot, 
       className={`bg-white/40 backdrop-blur-lg border border-white/20 rounded-2xl shadow-lg transition-shadow duration-200 ${snapshot.isDragging ? 'shadow-2xl' : ''}`}
     >
         <div 
-            {...dragHandleProps}
-            className={`flex items-center p-4 border-b border-white/20 ${cursorClass}`}
+            {...provided.dragHandleProps}
+            className="flex items-center p-4 border-b border-white/20 cursor-grab active:cursor-grabbing"
             aria-label={`Drag to reorder ${title}`}
         >
-            {canEdit && <GrabHandleIcon className="w-5 h-5 text-medium mr-3" />}
+            <GrabHandleIcon className="w-5 h-5 text-medium mr-3" />
             <h3 className="text-xl font-bold text-light">{title}</h3>
         </div>
         <div className="p-6 pt-4">
