@@ -1,12 +1,12 @@
-// 1. Firebase 콘솔에서 웹 앱을 추가하여 이 설정 객체를 받으세요.
-// 2. 아래의 값을 실제 프로젝트 설정 값으로 교체하세요.
-// 3. 이 파일은 버전 관리 시스템(Git)에 포함되지 않도록 .gitignore에 추가하는 것이 좋습니다.
+// Firebase 설정을 환경 변수에서 가져옵니다.
+// Vite는 import.meta.env를 통해 환경 변수에 접근합니다.
+// VITE_ 접두사가 붙은 환경 변수만 클라이언트에 노출됩니다.
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  authDomain: "your-project-id.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:1234567890abcdef123456"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
 };
