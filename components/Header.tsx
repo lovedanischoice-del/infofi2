@@ -1,16 +1,16 @@
 
-import React, { useRef } from 'react';
+import React from 'react';
+import { auth } from '../firebase/firebase';
+import { signOut, User } from 'firebase/auth';
 
 interface HeaderProps {
-    onExport: () => void;
-    onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    user: User | null;
+    onLoginClick: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onExport, onImport }) => {
-  const importInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImportClick = () => {
-    importInputRef.current?.click();
+const Header: React.FC<HeaderProps> = ({ user, onLoginClick }) => {
+  const handleSignOut = () => {
+    signOut(auth).catch(error => console.error("Sign out error", error));
   };
   
   return (
@@ -22,26 +22,25 @@ const Header: React.FC<HeaderProps> = ({ onExport, onImport }) => {
         <p className="mt-3 max-w-md mx-auto text-base text-medium sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
           Your daily tracker for check-ins & missions across the cryptoverse.
         </p>
-        <div className="absolute top-0 right-4 sm:right-8 flex items-center h-full space-x-2">
-            <input 
-                type="file" 
-                ref={importInputRef} 
-                onChange={onImport} 
-                className="hidden" 
-                accept="application/json"
-            />
-            <button
-              onClick={handleImportClick}
-              className="px-3 py-2 text-sm bg-slate-200 hover:bg-slate-300 text-light font-bold rounded-lg transition-colors"
-            >
-              Import Data
-            </button>
-            <button
-              onClick={onExport}
-              className="px-3 py-2 text-sm bg-accent hover:bg-fuchsia-600 text-white font-bold rounded-lg transition-colors"
-            >
-              Export Data
-            </button>
+        <div className="absolute top-0 right-4 sm:right-8 flex items-center h-full space-x-4">
+            {user ? (
+              <>
+                <span className="text-sm text-medium hidden sm:inline">{user.email}</span>
+                <button
+                  onClick={handleSignOut}
+                  className="px-3 py-2 text-sm bg-slate-200 hover:bg-slate-300 text-light font-bold rounded-lg transition-colors"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+                <button
+                  onClick={onLoginClick}
+                  className="px-3 py-2 text-sm bg-accent hover:bg-fuchsia-600 text-white font-bold rounded-lg transition-colors"
+                >
+                  Login to Edit
+                </button>
+            )}
         </div>
       </div>
     </header>

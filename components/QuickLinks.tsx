@@ -9,13 +9,14 @@ interface QuickLinksProps {
   links: QuickLink[];
   onDelete: (id: string) => void;
   onOpenModal: () => void;
+  canEdit: boolean;
 }
 
-const QuickLinks: React.FC<QuickLinksProps> = ({ links, onDelete, onOpenModal }) => {
+const QuickLinks: React.FC<QuickLinksProps> = ({ links, onDelete, onOpenModal, canEdit }) => {
   
   return (
     <div className="relative">
-       {links.length > 0 && (
+       {links.length > 0 && canEdit && (
         <button
           onClick={onOpenModal}
           className="absolute -top-14 right-0 bg-accent hover:bg-fuchsia-600 text-white p-2 rounded-lg"
@@ -27,7 +28,7 @@ const QuickLinks: React.FC<QuickLinksProps> = ({ links, onDelete, onOpenModal })
     
       <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
         {links.map((link) => (
-          <div key={link.id} className="flex items-center justify-between bg-white/50 p-2 rounded-md group">
+          <div key={link.id} className={`flex items-center justify-between bg-white/50 p-2 rounded-md ${canEdit ? 'group' : ''}`}>
             <a
               href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
               target="_blank"
@@ -37,16 +38,16 @@ const QuickLinks: React.FC<QuickLinksProps> = ({ links, onDelete, onOpenModal })
               <LinkIcon className="w-4 h-4 flex-shrink-0" />
               <span className="truncate" title={link.title}>{link.title}</span>
             </a>
-            <button
+            {canEdit && <button
               onClick={() => onDelete(link.id)}
               className="text-medium hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
               aria-label={`Delete ${link.title}`}
             >
               <TrashIcon className="w-4 h-4" />
-            </button>
+            </button>}
           </div>
         ))}
-        {links.length === 0 && (
+        {links.length === 0 && canEdit && (
           <button 
             onClick={onOpenModal}
             className="flex w-full items-center justify-center rounded-lg bg-accent py-3 text-center text-white font-bold transition-colors duration-200 hover:bg-fuchsia-600"
@@ -54,6 +55,9 @@ const QuickLinks: React.FC<QuickLinksProps> = ({ links, onDelete, onOpenModal })
             <PlusIcon className="w-5 h-5 mr-2" />
             <span>Add your quick link</span>
           </button>
+        )}
+         {links.length === 0 && !canEdit && (
+            <p className="text-center text-sm text-medium py-2">No quick links added.</p>
         )}
       </div>
     </div>
